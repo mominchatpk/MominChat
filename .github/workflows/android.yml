@@ -23,19 +23,26 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "Android SDK manager not found at $SDKMANAGER"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses || true
 
       - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Create Android project
+        shell: bash
         run: |
           mkdir -p app/src/main/java/com/momin/chat
           mkdir -p app/src/main/res/values
+
           cat > settings.gradle <<'EOF'
           pluginManagement {
               repositories {
@@ -54,22 +61,27 @@ jobs:
           rootProject.name = "MominChat"
           include(":app")
           EOF
+
           cat > build.gradle <<'EOF'
           plugins {
               id 'com.android.application' version '8.7.3' apply false
           }
           EOF
+
           cat > gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           EOF
+
           cat > app/build.gradle <<'EOF'
           plugins {
               id 'com.android.application'
           }
+
           android {
               namespace 'com.momin.chat'
               compileSdk 35
+
               defaultConfig {
                   applicationId 'com.momin.chat'
                   minSdk 23
@@ -79,11 +91,13 @@ jobs:
               }
           }
           EOF
+
           cat > app/src/main/res/values/strings.xml <<'EOF'
           <resources>
               <string name="app_name">Momin Chat</string>
           </resources>
           EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
@@ -101,6 +115,7 @@ jobs:
               </application>
           </manifest>
           EOF
+
           cat > app/src/main/java/com/momin/chat/MainActivity.java <<'EOF'
           package com.momin.chat;
 
@@ -115,6 +130,7 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
                   getWindow().setStatusBarColor(Color.rgb(7, 94, 84));
                   getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
 
@@ -131,7 +147,13 @@ jobs:
                   title.setGravity(Gravity.CENTER);
 
                   TextView message = new TextView(this);
-                  message.setText("Your private messaging app is being built.\n\nSecure sign-in, encrypted messages, media and voice calls will be added and tested in the next stages.");
+                  message.setText(
+                      "Welcome to Momin Chat!\n\n" +
+                      "Your Android app foundation is ready.\n\n" +
+                      "Google sign-in, private messaging, " +
+                      "encrypted media and voice calls " +
+                      "will be added and tested in later stages."
+                  );
                   message.setTextSize(16);
                   message.setTextColor(Color.DKGRAY);
                   message.setGravity(Gravity.CENTER);
