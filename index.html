@@ -3,65 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#075e54">
   <title>Momin Chat</title>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #edf2f5;
+      background: #f0f2f5;
       color: #202c33;
     }
+
     header {
       background: #075e54;
       color: white;
       padding: 22px 16px;
       text-align: center;
     }
-    header h1 { margin: 0 0 6px; }
-    header p { margin: 0; }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 14px;
+    }
+
     main {
       max-width: 480px;
-      margin: 25px auto;
-      padding: 16px;
+      margin: 35px auto;
+      padding: 20px;
     }
+
     .card {
       background: white;
-      padding: 22px;
+      padding: 25px 20px;
       border-radius: 14px;
-      box-shadow: 0 2px 8px #00000012;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      text-align: center;
     }
+
+    .logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 23px;
+      margin: 8px 0 12px;
+    }
+
+    .description {
+      color: #667781;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
     button {
       width: 100%;
-      padding: 13px;
-      border: 0;
+      padding: 14px;
+      margin-top: 16px;
+      border: none;
       border-radius: 8px;
-      background: #128c7e;
+      background: #075e54;
       color: white;
       font-size: 16px;
-      margin-top: 12px;
+      font-weight: bold;
       cursor: pointer;
     }
-    .secondary {
-      background: #e5eeee;
-      color: #075e54;
-    }
-    .note {
-      font-size: 13px;
-      color: #667781;
-      line-height: 1.5;
-    }
-    #status {
-      overflow-wrap: anywhere;
-      font-size: 14px;
-      line-height: 1.5;
-    }
+
     button:disabled {
       opacity: 0.6;
       cursor: wait;
     }
+
+    #signOutButton {
+      background: #667781;
+    }
+
+    #status {
+      margin-top: 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
+    .about {
+      margin-top: 22px;
+      padding: 18px;
+      background: white;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 14px;
+      color: #667781;
+    }
+
+    .about h3 {
+      color: #202c33;
+      margin-top: 0;
+    }
+
+    footer {
+      text-align: center;
+      color: #667781;
+      font-size: 12px;
+      padding: 20px;
+    }
   </style>
 </head>
+
 <body>
   <header>
     <h1>Momin Chat</h1>
@@ -70,43 +126,58 @@
 
   <main>
     <section class="card">
+      <div class="logo">💬</div>
       <h2>Welcome to Momin Chat</h2>
-      <p>Connect and chat with people you know.</p>
+      <p class="description">
+        Connect and chat with people you know.
+      </p>
 
-      <button id="googleButton">Continue with Google</button>
-      <button id="signOutButton" class="secondary" hidden>
+      <button id="googleButton">
+        Continue with Google
+      </button>
+
+      <button id="signOutButton" hidden>
         Sign Out
       </button>
 
-      <p id="status" role="status" aria-live="polite">
+      <div id="status" role="status" aria-live="polite">
         Please sign in with your Google account.
+      </div>
+    </section>
+
+    <section class="about">
+      <h3>About Momin Chat</h3>
+      <p>
+        Momin Chat is an early preview of a private
+        communication app.
       </p>
-
-      <button id="aboutButton" class="secondary">
-        About Momin Chat
-      </button>
-
-      <p class="note">
-        This is an early preview. Messaging, photo and video sharing,
-        voice messages, voice calls, and end-to-end encryption are
-        not available yet.
+      <p>
+        Text messaging, photo and video sharing, voice
+        messages, voice calls, and end-to-end encryption
+        are not available yet. These features require
+        further development and testing.
       </p>
     </section>
   </main>
 
+  <footer>
+    Momin Chat &copy; 2026
+  </footer>
+
   <script type="module">
-    import { initializeApp } from
-      "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+    import {
+      initializeApp
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 
     import {
       getAuth,
       GoogleAuthProvider,
-      signInWithRedirect,
-      getRedirectResult,
+      signInWithPopup,
       onAuthStateChanged,
-      signOut
-    } from
-      "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+      signOut,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBcuoE8sLRWgSXdlPEBrRUz1YDYSvjKBLE",
@@ -121,61 +192,92 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    provider.setCustomParameters({
+      prompt: "select_account"
+    });
+
     const googleButton = document.getElementById("googleButton");
     const signOutButton = document.getElementById("signOutButton");
-    const status = document.getElementById("status");
+    const statusBox = document.getElementById("status");
+
+    function showStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    function showError(error) {
+      console.error("Momin Chat sign-in error:", error);
+
+      const messages = {
+        "auth/popup-closed-by-user":
+          "The sign-in window was closed. Please try again.",
+        "auth/popup-blocked":
+          "The browser blocked the sign-in window. Allow pop-ups and try again.",
+        "auth/unauthorized-domain":
+          "This website domain is not authorized in Firebase Authentication.",
+        "auth/operation-not-allowed":
+          "Google sign-in is not enabled in Firebase.",
+        "auth/network-request-failed":
+          "Network error. Check your internet connection and try again.",
+        "auth/too-many-requests":
+          "Too many attempts. Please wait and try again."
+      };
+
+      showStatus(
+        messages[error.code] ||
+        "Sign-in failed: " + (error.code || error.message || "Unknown error")
+      );
+    }
 
     googleButton.addEventListener("click", async () => {
       googleButton.disabled = true;
-      status.textContent = "Opening Google sign-in...";
+      showStatus("Connecting to Google. Please wait...");
 
       try {
-        await signInWithRedirect(auth, provider);
+        await setPersistence(auth, browserLocalPersistence);
+
+        const result = await signInWithPopup(auth, provider);
+
+        showStatus(
+          "Google sign-in successful. Welcome, " +
+          (result.user.displayName || result.user.email || "user") +
+          "!"
+        );
       } catch (error) {
-        status.textContent =
-          "Sign-in could not start. Please check your Firebase settings and try again.";
+        showError(error);
+      } finally {
         googleButton.disabled = false;
-        console.error("Google sign-in error:", error.code, error.message);
       }
     });
 
     signOutButton.addEventListener("click", async () => {
+      signOutButton.disabled = true;
+      showStatus("Signing out...");
+
       try {
         await signOut(auth);
-        status.textContent = "You have signed out.";
+        showStatus("You have signed out.");
       } catch (error) {
-        status.textContent = "Sign-out failed. Please try again.";
-        console.error("Sign-out error:", error);
+        showError(error);
+      } finally {
+        signOutButton.disabled = false;
       }
-    });
-
-    document.getElementById("aboutButton").addEventListener("click", () => {
-      alert(
-        "Momin Chat is being built. Messaging and calling features are not available yet."
-      );
     });
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        status.textContent =
-          "You are signed in. Welcome, " +
-          (user.displayName || "Momin Chat user") +
-          "!";
         googleButton.hidden = true;
         signOutButton.hidden = false;
+
+        showStatus(
+          "Signed in as " +
+          (user.displayName || user.email || "Google user") +
+          "."
+        );
       } else {
-        status.textContent = "Please sign in with your Google account.";
         googleButton.hidden = false;
         signOutButton.hidden = true;
-        googleButton.disabled = false;
+        showStatus("Please sign in with your Google account.");
       }
-    });
-
-    getRedirectResult(auth).catch((error) => {
-      console.error("Google sign-in result error:", error.code, error.message);
-      status.textContent =
-        "Sign-in did not complete. Please check the Firebase settings and try again.";
-      googleButton.disabled = false;
     });
   </script>
 </body>
