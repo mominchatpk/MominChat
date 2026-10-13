@@ -130,7 +130,6 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
                   getWindow().setStatusBarColor(Color.rgb(7, 94, 84));
                   getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
 
