@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "970724069428",
+    "project_id": "mominchat-1e171",
+    "storage_bucket": "mominchat-1e171.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:970724069428:android:295e160d91ccabca8e3a61",
+        "android_client_info": {
+          "package_name": "com.momin.chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "970724069428-5ob2quqes8on87rtrr7vrdfsjdrddhj8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu1zz8_LoVo8IdXIprxFW12uYItw7xqik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "970724069428-5ob2quqes8on87rtrr7vrdfsjdrddhj8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
