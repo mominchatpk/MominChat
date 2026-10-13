@@ -28,7 +28,7 @@ jobs:
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then
-            echo "Android SDK manager not found at $SDKMANAGER"
+            echo "Android SDK manager not found"
             exit 1
           fi
           yes | "$SDKMANAGER" --licenses || true
@@ -168,6 +168,15 @@ jobs:
 
       - name: Build debug APK
         run: gradle assembleDebug
+
+      - name: Show debug signing certificate SHA-1
+        shell: bash
+        run: |
+          keytool -list -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey | grep -E 'SHA1:|SHA-1:'
 
       - name: Save APK
         uses: actions/upload-artifact@v4
