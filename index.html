@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Momin Chat</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #edf2f5;
+  color: #202c33;
+}
+header {
+  background: #075e54;
+  color: white;
+  padding: 22px 16px;
+  text-align: center;
+}
+header h1 { margin: 0 0 6px; }
+header p { margin: 0; }
+main { max-width: 480px; margin: 25px auto; padding: 16px; }
+.card {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px #00000012;
+}
+button {
+  width: 100%;
+  padding: 13px;
+  border: 0;
+  border-radius: 8px;
+  background: #128c7e;
+  color: white;
+  font-size: 16px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+.secondary { background: #e5eeee; color: #075e54; }
+.note { font-size: 13px; color: #667781; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Momin Chat</h1>
+  <p>Simple. Private. Connected.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Welcome to Momin Chat</h2>
+    <p>Connect and chat with people you know.</p>
+    <button onclick="alert('Google Sign-In will be connected in a later step.')">
+      Continue with Google
+    </button>
+    <button class="secondary" onclick="showInfo()">
+      About Momin Chat
+    </button>
+    <p class="note">
+      This is an early interface preview. Sign-in, messaging, calls,
+      and end-to-end encryption are not active yet.
+    </p>
+  </section>
+</main>
+
+<script>
+function showInfo() {
+  alert('Momin Chat is being built. More features will be added and tested.');
+}
+</script>
+</body>
+</html>
