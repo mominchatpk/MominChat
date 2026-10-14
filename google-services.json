@@ -14,6 +14,30 @@
       },
       "oauth_client": [
         {
+          "client_id": "970724069428-5usv4up3tii6asjrueopbh61qea36jgt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "571dbd4b3452431e5eab03b1315da8a7b12afdca"
+          }
+        },
+        {
+          "client_id": "970724069428-i12anksg6elds7g7nhc8d6u4qju6epsi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "9d8cd7447ba89c948ec351c852f706db2eb44f00"
+          }
+        },
+        {
+          "client_id": "970724069428-si8boedgf2gpvtqckbqcno5jbii0i8uo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "b8fc80048fa9d9bdd3aabb4a746c2ec2409a4a3b"
+          }
+        },
+        {
           "client_id": "970724069428-5ob2quqes8on87rtrr7vrdfsjdrddhj8.apps.googleusercontent.com",
           "client_type": 3
         }
