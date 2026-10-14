@@ -3,6 +3,9 @@ name: Build Momin Chat Android APK
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build Android APK
@@ -23,15 +26,11 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Accept Android SDK licenses
+      - name: Install Android SDK
         shell: bash
         run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses || true
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
@@ -41,16 +40,32 @@ jobs:
         shell: bash
         run: |
           test -f google-services.json
-          mkdir -p app
-          cp google-services.json app/google-services.json
+          python3 - <<'PY'
+          import json
+          with open("google-services.json") as f:
+              data = json.load(f)
+          clients = data.get("client", [])
+          matches = [
+              c for c in clients
+              if c.get("client_info", {})
+                   .get("android_client_info", {})
+                   .get("package_name") == "com.momin.chat"
+          ]
+          if not matches:
+              raise SystemExit(
+                  "google-services.json has no Android client for com.momin.chat"
+              )
+          print("Firebase Android package configuration found.")
+          PY
 
       - name: Create Android project
         shell: bash
         run: |
           mkdir -p app/src/main/java/com/momin/chat
           mkdir -p app/src/main/res/values
+          cp google-services.json app/google-services.json
 
-          cat > settings.gradle <<'EOF'
+          cat > settings.gradle <<'SETTINGS'
           pluginManagement {
               repositories {
                   google()
@@ -58,6 +73,7 @@ jobs:
                   gradlePluginPortal()
               }
           }
+
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
@@ -65,23 +81,24 @@ jobs:
                   mavenCentral()
               }
           }
+
           rootProject.name = "MominChat"
           include(":app")
-          EOF
+          SETTINGS
 
-          cat > build.gradle <<'EOF'
+          cat > build.gradle <<'ROOT'
           plugins {
               id 'com.android.application' version '8.7.3' apply false
               id 'com.google.gms.google-services' version '4.4.2' apply false
           }
-          EOF
+          ROOT
 
-          cat > gradle.properties <<'EOF'
+          cat > gradle.properties <<'PROPS'
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
-          EOF
+          PROPS
 
-          cat > app/build.gradle <<'EOF'
+          cat > app/build.gradle <<'APPBUILD'
           plugins {
               id 'com.android.application'
               id 'com.google.gms.google-services'
@@ -95,22 +112,13 @@ jobs:
                   applicationId 'com.momin.chat'
                   minSdk 23
                   targetSdk 35
-                  versionCode 4
-                  versionName '1.3'
-              }
-
-              signingConfigs {
-                  stable {
-                      storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
-                      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-                  }
+                  versionCode 5
+                  versionName '1.4'
               }
 
               buildTypes {
                   debug {
-                      signingConfig signingConfigs.stable
+                      applicationIdSuffix ''
                   }
               }
           }
@@ -121,15 +129,15 @@ jobs:
               implementation 'com.google.firebase:firebase-firestore'
               implementation 'com.google.android.gms:play-services-auth:21.2.0'
           }
-          EOF
+          APPBUILD
 
-          cat > app/src/main/res/values/strings.xml <<'EOF'
+          cat > app/src/main/res/values/strings.xml <<'STRINGS'
           <resources>
               <string name="app_name">Momin Chat</string>
           </resources>
-          EOF
+          STRINGS
 
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          cat > app/src/main/AndroidManifest.xml <<'MANIFEST'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
 
@@ -153,15 +161,15 @@ jobs:
                   </activity>
               </application>
           </manifest>
-          EOF
+          MANIFEST
 
-          cat > app/src/main/java/com/momin/chat/MainActivity.java <<'EOF'
+          cat > app/src/main/java/com/momin/chat/MainActivity.java <<'MAIN'
           package com.momin.chat;
 
           import android.app.Activity;
           import android.content.Intent;
-          import android.os.Bundle;
           import android.graphics.Color;
+          import android.os.Bundle;
           import android.view.Gravity;
           import android.view.WindowManager;
           import android.widget.Button;
@@ -173,7 +181,6 @@ jobs:
           import com.google.android.gms.auth.api.signin.GoogleSignInClient;
           import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
           import com.google.android.gms.common.api.ApiException;
-          import com.google.firebase.auth.AuthCredential;
           import com.google.firebase.auth.FirebaseAuth;
           import com.google.firebase.auth.GoogleAuthProvider;
 
@@ -185,8 +192,8 @@ jobs:
               private Button loginButton;
 
               @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+              protected void onCreate(Bundle state) {
+                  super.onCreate(state);
 
                   getWindow().setFlags(
                       WindowManager.LayoutParams.FLAG_SECURE,
@@ -229,7 +236,6 @@ jobs:
                   status = new TextView(this);
                   status.setText("Sign in to get started");
                   status.setTextSize(16);
-                  status.setTextColor(Color.DKGRAY);
                   status.setGravity(Gravity.CENTER);
                   status.setPadding(0, 24, 0, 24);
 
@@ -268,21 +274,19 @@ jobs:
                           return;
                       }
 
-                      AuthCredential credential =
+                      auth.signInWithCredential(
                           GoogleAuthProvider.getCredential(
                               account.getIdToken(), null
-                          );
-
-                      auth.signInWithCredential(credential)
-                          .addOnCompleteListener(this, task -> {
-                              if (task.isSuccessful()) {
-                                  openChat();
-                              } else {
-                                  showError("Firebase sign-in failed.");
-                              }
-                          });
+                          )
+                      ).addOnCompleteListener(this, task -> {
+                          if (task.isSuccessful()) {
+                              openChat();
+                          } else {
+                              showError("Firebase sign-in failed.");
+                          }
+                      });
                   } catch (Exception e) {
-                      showError("Sign-in failed. Please try again.");
+                      showError("Sign-in cancelled or failed. Try again.");
                   }
               }
 
@@ -296,9 +300,9 @@ jobs:
                   finish();
               }
           }
-          EOF
+          MAIN
 
-          cat > app/src/main/java/com/momin/chat/ChatActivity.java <<'EOF'
+          cat > app/src/main/java/com/momin/chat/ChatActivity.java <<'CHAT'
           package com.momin.chat;
 
           import android.app.Activity;
@@ -330,13 +334,17 @@ jobs:
               private FirebaseFirestore db;
               private FirebaseUser me;
               private LinearLayout content;
+              private LinearLayout messages;
+              private EditText messageInput;
+              private ScrollView messageScroll;
               private ListenerRegistration messageListener;
               private String activeChatId;
               private String activePeerName;
+              private String activePeerId;
 
               @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+              protected void onCreate(Bundle state) {
+                  super.onCreate(state);
 
                   getWindow().setFlags(
                       WindowManager.LayoutParams.FLAG_SECURE,
@@ -376,38 +384,43 @@ jobs:
                   Button signOut = new Button(this);
                   signOut.setText("Sign out");
                   signOut.setOnClickListener(v -> {
-                      if (messageListener != null) messageListener.remove();
+                      stopMessageListener();
                       FirebaseAuth.getInstance().signOut();
-                      startActivity(new Intent(this, MainActivity.class));
-                      finish();
+                      GoogleSignInHelper.signOut(this, () -> {
+                          startActivity(new Intent(this, MainActivity.class));
+                          finish();
+                      });
                   });
 
                   header.addView(title, new LinearLayout.LayoutParams(
-                      0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+                      0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
+                  ));
                   header.addView(signOut);
 
-                  ScrollView scroll = new ScrollView(this);
                   content = new LinearLayout(this);
                   content.setOrientation(LinearLayout.VERTICAL);
                   content.setPadding(12, 12, 12, 12);
+
+                  ScrollView scroll = new ScrollView(this);
                   scroll.addView(content);
 
                   root.addView(header);
                   root.addView(scroll, new LinearLayout.LayoutParams(
-                      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+                      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1
+                  ));
                   setContentView(root);
               }
 
               private void registerProfile() {
-                  Map<String, Object> profile = new HashMap<>();
                   String name = me.getDisplayName();
                   if (name == null || name.trim().isEmpty()) {
                       name = "Momin Chat user";
                   }
+
+                  Map<String, Object> profile = new HashMap<>();
                   profile.put("displayName", name);
                   profile.put("uid", me.getUid());
 
-                  // Google email is not stored in this profile.
                   db.collection("users").document(me.getUid())
                       .set(profile)
                       .addOnFailureListener(e ->
@@ -415,6 +428,7 @@ jobs:
               }
 
               private void showUsers() {
+                  stopMessageListener();
                   content.removeAllViews();
 
                   TextView heading = new TextView(this);
@@ -475,6 +489,7 @@ jobs:
               }
 
               private void openPrivateChat(String peerId, String peerName) {
+                  activePeerId = peerId;
                   activePeerName = peerName;
                   activeChatId = chatIdFor(peerId);
 
@@ -485,8 +500,8 @@ jobs:
                       .continueWithTask(task -> {
                           if (!task.isSuccessful()) throw task.getException();
                           if (!task.getResult().exists()) {
-                              return db.collection("chats").document(activeChatId)
-                                  .set(chat);
+                              return db.collection("chats")
+                                  .document(activeChatId).set(chat);
                           }
                           return com.google.android.gms.tasks.Tasks.forResult(null);
                       })
@@ -496,18 +511,12 @@ jobs:
               }
 
               private void showPrivateChat() {
-                  if (messageListener != null) messageListener.remove();
+                  stopMessageListener();
                   content.removeAllViews();
 
                   Button back = new Button(this);
                   back.setText("Back to users");
-                  back.setOnClickListener(v -> {
-                      if (messageListener != null) {
-                          messageListener.remove();
-                          messageListener = null;
-                      }
-                      showUsers();
-                  });
+                  back.setOnClickListener(v -> showUsers());
                   content.addView(back);
 
                   TextView title = new TextView(this);
@@ -515,70 +524,125 @@ jobs:
                   title.setTextSize(20);
                   title.setTextColor(Color.rgb(7, 94, 84));
                   content.addView(title);
-          cat > app/src/main/java/com/momin/chat/GoogleSignOutHelper.java <<'EOF'
-          package com.momin.chat;
 
-          import android.app.Activity;
-          import android.content.Intent;
+                  messages = new Linear
+                  messages = new LinearLayout(this);
+                  messages.setOrientation(LinearLayout.VERTICAL);
+                  messages.setPadding(4, 8, 4, 8);
 
-          import com.google.android.gms.auth.api.signin.GoogleSignIn;
-          import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+                  messageScroll = new ScrollView(this);
+                  messageScroll.addView(messages);
+                  content.addView(messageScroll, new LinearLayout.LayoutParams(
+                      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1
+                  ));
 
-          public final class GoogleSignOutHelper {
-              private GoogleSignOutHelper() {}
+                  LinearLayout composer = new LinearLayout(this);
+                  composer.setGravity(Gravity.CENTER_VERTICAL);
+                  composer.setOrientation(LinearLayout.HORIZONTAL);
 
-              public static void signOut(Activity activity) {
-                  GoogleSignInOptions options =
-                      new GoogleSignInOptions.Builder(
-                          GoogleSignInOptions.DEFAULT_SIGN_IN)
-                      .requestIdToken(activity.getString(
-                          com.momin.chat.R.string.default_web_client_id))
-                      .requestEmail()
-                      .build();
+                  messageInput = new EditText(this);
+                  messageInput.setSingleLine(false);
+                  messageInput.setHint("Write a message...");
+                  messageInput.setMaxLines(4);
 
-                  GoogleSignIn.getClient(activity, options)
-                      .signOut()
-                      .addOnCompleteListener(task -> {
-                          Intent intent = new Intent(
-                              activity, MainActivity.class);
-                          intent.addFlags(
-                              Intent.FLAG_ACTIVITY_NEW_TASK
-                              | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                          activity.startActivity(intent);
-                          activity.finish();
+                  Button send = new Button(this);
+                  send.setText("Send");
+                  send.setOnClickListener(v -> sendMessage());
+
+                  composer.addView(messageInput, new LinearLayout.LayoutParams(
+                      0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
+                  ));
+                  composer.addView(send);
+                  content.addView(composer);
+
+                  listenForMessages();
+              }
+
+              private void sendMessage() {
+                  String text = messageInput.getText().toString().trim();
+                  if (text.isEmpty() || activeChatId == null) return;
+
+                  messageInput.setEnabled(false);
+
+                  Map<String, Object> message = new HashMap<>();
+                  message.put("senderId", me.getUid());
+                  message.put("text", text);
+                  message.put("timestamp", FieldValue.serverTimestamp());
+
+                  db.collection("chats").document(activeChatId)
+                      .collection("messages").add(message)
+                      .addOnSuccessListener(ref -> {
+                          messageInput.setText("");
+                          messageInput.setEnabled(true);
+                      })
+                      .addOnFailureListener(e -> {
+                          messageInput.setEnabled(true);
+                          toast("Message not sent. Check Firestore Rules.");
                       });
               }
+
+              private void listenForMessages() {
+                  messageListener = db.collection("chats")
+                      .document(activeChatId)
+                      .collection("messages")
+                      .orderBy("timestamp", Query.Direction.ASCENDING)
+                      .limit(200)
+                      .addSnapshotListener((snapshot, error) -> {
+                          if (error != null) {
+                              toast("Could not load messages. Check Firestore Rules.");
+                              return;
+                          }
+                          if (snapshot == null || messages == null) return;
+
+                          messages.removeAllViews();
+
+                          for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                              String body = doc.getString("text");
+                              String sender = doc.getString("senderId");
+                              if (body == null) continue;
+
+                              TextView bubble = new TextView(this);
+                              String prefix = me.getUid().equals(sender)
+                                  ? "You: " : activePeerName + ": ";
+                              bubble.setText(prefix + body);
+                              bubble.setTextSize(16);
+                              bubble.setTextColor(Color.DKGRAY);
+                              bubble.setPadding(12, 10, 12, 10);
+                              bubble.setBackgroundColor(
+                                  me.getUid().equals(sender)
+                                      ? Color.rgb(220, 248, 198)
+                                      : Color.WHITE
+                              );
+
+                              LinearLayout.LayoutParams params =
+                                  new LinearLayout.LayoutParams(
+                                      LinearLayout.LayoutParams.MATCH_PARENT,
+                                      LinearLayout.LayoutParams.WRAP_CONTENT
+                                  );
+                              params.setMargins(0, 4, 0, 4);
+                              messages.addView(bubble, params);
+                          }
+
+                          messageScroll.post(() ->
+                              messageScroll.fullScroll(ScrollView.FOCUS_DOWN));
+                      });
+              }
+
+              private void stopMessageListener() {
+                  if (messageListener != null) {
+                      messageListener.remove();
+                      messageListener = null;
+                  }
+              }
+
+              private void toast(String message) {
+                  Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+              }
+
+              @Override
+              protected void onDestroy() {
+                  stopMessageListener();
+                  super.onDestroy();
+              }
           }
-          EOF
-
-      - name: Restore signing keystore
-        shell: bash
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          test -n "$ANDROID_KEYSTORE_BASE64"
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mominchat-release.jks"
-          test -s "$RUNNER_TEMP/mominchat-release.jks"
-
-      - name: Build signed release APK
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/mominchat-release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
-
-      - name: Verify APK exists
-        run: |
-          test -s app/build/outputs/apk/release/app-release.apk
-          ls -lh app/build/outputs/apk/release/app-release.apk
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MominChat-release-APK
-          path: app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
-          retention-days: 7
-
-   
+          
