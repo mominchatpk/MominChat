@@ -27,10 +27,6 @@ jobs:
         shell: bash
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            echo "Android SDK manager not found"
-            exit 1
-          fi
           yes | "$SDKMANAGER" --licenses || true
 
       - name: Install Android SDK packages
@@ -44,9 +40,9 @@ jobs:
             mkdir -p app
             cp google-services.json app/google-services.json
           elif [ -f app/google-services.json ]; then
-            echo "Firebase configuration found in app/"
+            echo "Firebase configuration found."
           else
-            echo "::error::google-services.json is missing. Add the Firebase Android configuration file to the repository root or app/ folder."
+            echo "::error::google-services.json is missing."
             exit 1
           fi
 
@@ -101,17 +97,15 @@ jobs:
                   applicationId 'com.momin.chat'
                   minSdk 23
                   targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
+                  versionCode 2
+                  versionName '1.1'
               }
           }
 
           dependencies {
               implementation platform('com.google.firebase:firebase-bom:33.7.0')
               implementation 'com.google.firebase:firebase-auth'
-              implementation 'androidx.credentials:credentials:1.5.0'
-              implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-              implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+              implementation 'com.google.android.gms:play-services-auth:21.2.0'
           }
           EOF
 
@@ -134,12 +128,10 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true">
-
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
-
                   </activity>
               </application>
           </manifest>
@@ -149,33 +141,32 @@ jobs:
           package com.momin.chat;
 
           import android.app.Activity;
+          import android.content.Intent;
           import android.os.Bundle;
-          import android.os.CancellationSignal;
           import android.graphics.Color;
           import android.view.Gravity;
+          import android.view.View;
           import android.view.WindowManager;
           import android.widget.Button;
           import android.widget.LinearLayout;
           import android.widget.TextView;
 
-          import androidx.credentials.Credential;
-          import androidx.credentials.CredentialManager;
-          import androidx.credentials.CredentialManagerCallback;
-          import androidx.credentials.CustomCredential;
-          import androidx.credentials.GetCredentialRequest;
-          import androidx.credentials.GetCredentialResponse;
-          import androidx.credentials.exceptions.GetCredentialException;
-
-          import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
-          import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+          import com.google.android.gms.auth.api.signin.GoogleSignIn;
+          import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+          import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+          import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+          import com.google.android.gms.common.api.ApiException;
+          import com.google.android.gms.tasks.Task;
           import com.google.firebase.auth.AuthCredential;
           import com.google.firebase.auth.FirebaseAuth;
           import com.google.firebase.auth.FirebaseUser;
           import com.google.firebase.auth.GoogleAuthProvider;
 
           public class MainActivity extends Activity {
+              private static final int RC_SIGN_IN = 9001;
+
               private FirebaseAuth auth;
-              private CredentialManager credentialManager;
+              private GoogleSignInClient googleClient;
               private TextView status;
               private Button loginButton;
               private Button logoutButton;
@@ -192,7 +183,18 @@ jobs:
                   getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
 
                   auth = FirebaseAuth.getInstance();
-                  credentialManager = CredentialManager.create(this);
+
+                  GoogleSignInOptions options =
+                      new GoogleSignInOptions.Builder(
+                          GoogleSignInOptions.DEFAULT_SIGN_IN
+                      )
+                      .requestIdToken(
+                          getString(R.string.default_web_client_id)
+                      )
+                      .requestEmail()
+                      .build();
+
+                  googleClient = GoogleSignIn.getClient(this, options);
 
                   LinearLayout layout = new LinearLayout(this);
                   layout.setOrientation(LinearLayout.VERTICAL);
@@ -220,7 +222,9 @@ jobs:
                   logoutButton.setText("Sign out");
                   logoutButton.setOnClickListener(v -> {
                       auth.signOut();
-                      updateSignedInState();
+                      googleClient.signOut().addOnCompleteListener(task ->
+                          updateSignedInState()
+                      );
                   });
 
                   TextView privacy = new TextView(this);
@@ -248,17 +252,18 @@ jobs:
                   FirebaseUser user = auth.getCurrentUser();
 
                   if (user != null) {
-                      String displayName = user.getDisplayName();
-                      if (displayName == null || displayName.trim().isEmpty()) {
-                          displayName = "Momin Chat user";
+                      String name = user.getDisplayName();
+                      if (name == null || name.trim().isEmpty()) {
+                          name = "Momin Chat user";
                       }
-                      status.setText("Signed in successfully\nWelcome, " + displayName);
-                      loginButton.setVisibility(android.view.View.GONE);
-                      logoutButton.setVisibility(android.view.View.VISIBLE);
+
+                      status.setText("Signed in successfully\nWelcome, " + name);
+                      loginButton.setVisibility(View.GONE);
+                      logoutButton.setVisibility(View.VISIBLE);
                   } else {
                       status.setText("Sign in to get started");
-                      loginButton.setVisibility(android.view.View.VISIBLE);
-                      logoutButton.setVisibility(android.view.View.GONE);
+                      loginButton.setVisibility(View.VISIBLE);
+                      logoutButton.setVisibility(View.GONE);
                   }
               }
 
@@ -267,82 +272,77 @@ jobs:
                   loginButton.setEnabled(false);
 
                   try {
-                      GetGoogleIdOption googleIdOption =
-                          new GetGoogleIdOption.Builder()
-                              .setFilterByAuthorizedAccounts(false)
-                              .setServerClientId(
-                                  getString(R.string.default_web_client_id)
-                              )
-                              .setAutoSelectEnabled(false)
-                              .build();
-
-                      GetCredentialRequest request =
-                          new GetCredentialRequest.Builder()
-                              .addCredentialOption(googleIdOption)
-                              .build();
-
-                      credentialManager.getCredentialAsync(
-                          this,
-                          request,
-                          new CancellationSignal(),
-                          getMainExecutor(),
-                          new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
-                              @Override
-                              public void onResult(GetCredentialResponse result) {
-                                  handleCredential(result.getCredential());
-                              }
-
-                              @Override
-                              public void onError(GetCredentialException e) {
-                                  loginButton.setEnabled(true);
-                                  status.setText(
-                                      "Google sign-in could not be completed. Please try again."
-                                  );
-                              }
-                          }
-                      );
+                      Intent intent = googleClient.getSignInIntent();
+                      startActivityForResult(intent, RC_SIGN_IN);
                   } catch (Exception e) {
                       loginButton.setEnabled(true);
-                      status.setText("Unable to start Google sign-in. Please try again.");
+                      status.setText(
+                          "Could not open Google sign-in: " +
+                          e.getClass().getSimpleName() + ": " +
+                          String.valueOf(e.getMessage())
+                      );
                   }
               }
 
-              private void handleCredential(Credential credential) {
-                  if (!(credential instanceof CustomCredential)
-                      || !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                          .equals(credential.getType())) {
-                      loginButton.setEnabled(true);
-                      status.setText("Please choose a Google account and try again.");
+              @Override
+              protected void onActivityResult(
+                  int requestCode, int resultCode, Intent data
+              ) {
+                  super.onActivityResult(requestCode, resultCode, data);
+
+                  if (requestCode != RC_SIGN_IN) {
                       return;
                   }
 
                   try {
-                      GoogleIdTokenCredential googleCredential =
-                          GoogleIdTokenCredential.createFrom(
-                              ((CustomCredential) credential).getData()
-                          );
+                      Task<GoogleSignInAccount> task =
+                          GoogleSignIn.getSignedInAccountFromIntent(data);
 
-                      AuthCredential firebaseCredential =
+                      GoogleSignInAccount account =
+                          task.getResult(ApiException.class);
+
+                      if (account.getIdToken() == null) {
+                          loginButton.setEnabled(true);
+                          status.setText(
+                              "Google ID token is missing. Check Web Client ID."
+                          );
+                          return;
+                      }
+
+                      AuthCredential credential =
                           GoogleAuthProvider.getCredential(
-                              googleCredential.getIdToken(),
-                              null
+                              account.getIdToken(), null
                           );
 
-                      auth.signInWithCredential(firebaseCredential)
-                          .addOnCompleteListener(this, task -> {
+                      auth.signInWithCredential(credential)
+                          .addOnCompleteListener(this, result -> {
                               loginButton.setEnabled(true);
 
-                              if (task.isSuccessful()) {
+                              if (result.isSuccessful()) {
                                   updateSignedInState();
                               } else {
+                                  String message = result.getException() == null
+                                      ? "Unknown Firebase error"
+                                      : result.getException().getMessage();
+
                                   status.setText(
-                                      "Firebase sign-in failed. Check Firebase settings and try again."
+                                      "Firebase sign-in failed: " + message
                                   );
                               }
                           });
+
+                  } catch (ApiException e) {
+                      loginButton.setEnabled(true);
+                      status.setText(
+                          "Google sign-in error code " + e.getStatusCode() +
+                          ": " + e.getStatusMessage()
+                      );
                   } catch (Exception e) {
                       loginButton.setEnabled(true);
-                      status.setText("Google account verification failed. Please try again.");
+                      status.setText(
+                          "Sign-in error: " + e.getClass().getSimpleName() +
+                          ": " + String.valueOf(e.getMessage())
+                      );
                   }
               }
           }
@@ -351,7 +351,7 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug
 
-      - name: Show actual APK signing certificate SHA-1
+      - name: Show APK signing certificate
         shell: bash
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
@@ -361,3 +361,4 @@ jobs:
         with:
           name: Momin-Chat-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          
