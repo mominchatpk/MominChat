@@ -173,8 +173,6 @@ jobs:
           import com.google.firebase.auth.FirebaseUser;
           import com.google.firebase.auth.GoogleAuthProvider;
 
-          import java.util.concurrent.Executor;
-
           public class MainActivity extends Activity {
               private FirebaseAuth auth;
               private CredentialManager credentialManager;
@@ -272,9 +270,9 @@ jobs:
                       GetGoogleIdOption googleIdOption =
                           new GetGoogleIdOption.Builder()
                               .setFilterByAuthorizedAccounts(false)
-                              .setServerClientId(getString(
-                                  com.google.firebase.auth.R.string.default_web_client_id
-                              ))
+                              .setServerClientId(
+                                  getString(R.string.default_web_client_id)
+                              )
                               .setAutoSelectEnabled(false)
                               .build();
 
