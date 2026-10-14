@@ -30,7 +30,6 @@ jobs:
         shell: bash
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
@@ -40,29 +39,23 @@ jobs:
         shell: bash
         run: |
           test -f google-services.json
-          python3 - <<'PY'
+          python3 - <<'PYCONFIG'
           import json
-          with open("google-services.json") as f:
+          with open("google-services.json", encoding="utf-8") as f:
               data = json.load(f)
-          clients = data.get("client", [])
           matches = [
-              c for c in clients
-              if c.get("client_info", {})
-                   .get("android_client_info", {})
-                   .get("package_name") == "com.momin.chat"
+              c for c in data.get("client", [])
+              if c.get("client_info", {}).get("android_client_info", {}).get("package_name") == "com.momin.chat"
           ]
           if not matches:
-              raise SystemExit(
-                  "google-services.json has no Android client for com.momin.chat"
-              )
+              raise SystemExit("google-services.json has no Android client for com.momin.chat")
           print("Firebase Android package configuration found.")
-          PY
+          PYCONFIG
 
       - name: Create Android project
         shell: bash
         run: |
-          mkdir -p app/src/main/java/com/momin/chat
-          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/java/com/momin/chat app/src/main/res/values
           cp google-services.json app/google-services.json
 
           cat > settings.gradle <<'SETTINGS'
@@ -73,7 +66,6 @@ jobs:
                   gradlePluginPortal()
               }
           }
-
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
@@ -81,7 +73,6 @@ jobs:
                   mavenCentral()
               }
           }
-
           rootProject.name = "MominChat"
           include(":app")
           SETTINGS
@@ -103,11 +94,9 @@ jobs:
               id 'com.android.application'
               id 'com.google.gms.google-services'
           }
-
           android {
               namespace 'com.momin.chat'
               compileSdk 35
-
               defaultConfig {
                   applicationId 'com.momin.chat'
                   minSdk 23
@@ -115,14 +104,7 @@ jobs:
                   versionCode 5
                   versionName '1.4'
               }
-
-              buildTypes {
-                  debug {
-                      applicationIdSuffix ''
-                  }
-              }
           }
-
           dependencies {
               implementation platform('com.google.firebase:firebase-bom:33.7.0')
               implementation 'com.google.firebase:firebase-auth'
@@ -140,20 +122,13 @@ jobs:
           cat > app/src/main/AndroidManifest.xml <<'MANIFEST'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-
               <application
                   android:theme="@android:style/Theme.Material.Light.NoActionBar"
                   android:label="@string/app_name"
                   android:usesCleartextTraffic="false"
                   android:allowBackup="false">
-
-                  <activity
-                      android:name=".ChatActivity"
-                      android:exported="false" />
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
+                  <activity android:name=".ChatActivity" android:exported="false" />
+                  <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -175,7 +150,6 @@ jobs:
           import android.widget.Button;
           import android.widget.LinearLayout;
           import android.widget.TextView;
-
           import com.google.android.gms.auth.api.signin.GoogleSignIn;
           import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
           import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -191,114 +165,45 @@ jobs:
               private TextView status;
               private Button loginButton;
 
-              @Override
-              protected void onCreate(Bundle state) {
+              @Override protected void onCreate(Bundle state) {
                   super.onCreate(state);
-
-                  getWindow().setFlags(
-                      WindowManager.LayoutParams.FLAG_SECURE,
-                      WindowManager.LayoutParams.FLAG_SECURE
-                  );
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                   getWindow().setStatusBarColor(Color.rgb(7, 94, 84));
                   getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
-
                   auth = FirebaseAuth.getInstance();
-
-                  if (auth.getCurrentUser() != null) {
-                      openChat();
-                      return;
-                  }
-
-                  GoogleSignInOptions options =
-                      new GoogleSignInOptions.Builder(
-                          GoogleSignInOptions.DEFAULT_SIGN_IN
-                      )
-                      .requestIdToken(
-                          getString(R.string.default_web_client_id)
-                      )
-                      .requestEmail()
-                      .build();
-
+                  if (auth.getCurrentUser() != null) { openChat(); return; }
+                  GoogleSignInOptions options = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                      .requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build();
                   googleClient = GoogleSignIn.getClient(this, options);
-
                   LinearLayout layout = new LinearLayout(this);
-                  layout.setOrientation(LinearLayout.VERTICAL);
-                  layout.setGravity(Gravity.CENTER);
-                  layout.setPadding(32, 32, 32, 32);
-                  layout.setBackgroundColor(Color.rgb(245, 247, 248));
-
-                  TextView title = new TextView(this);
-                  title.setText("Momin Chat");
-                  title.setTextSize(30);
-                  title.setTextColor(Color.rgb(7, 94, 84));
-                  title.setGravity(Gravity.CENTER);
-
-                  status = new TextView(this);
-                  status.setText("Sign in to get started");
-                  status.setTextSize(16);
-                  status.setGravity(Gravity.CENTER);
-                  status.setPadding(0, 24, 0, 24);
-
-                  loginButton = new Button(this);
-                  loginButton.setText("Continue with Google");
+                  layout.setOrientation(LinearLayout.VERTICAL); layout.setGravity(Gravity.CENTER);
+                  layout.setPadding(32, 32, 32, 32); layout.setBackgroundColor(Color.rgb(245, 247, 248));
+                  TextView title = new TextView(this); title.setText("Momin Chat"); title.setTextSize(30);
+                  title.setTextColor(Color.rgb(7, 94, 84)); title.setGravity(Gravity.CENTER);
+                  status = new TextView(this); status.setText("Sign in to get started"); status.setTextSize(16);
+                  status.setGravity(Gravity.CENTER); status.setPadding(0, 24, 0, 24);
+                  loginButton = new Button(this); loginButton.setText("Continue with Google");
                   loginButton.setOnClickListener(v -> signIn());
-
-                  layout.addView(title);
-                  layout.addView(status);
-                  layout.addView(loginButton);
-                  setContentView(layout);
+                  layout.addView(title); layout.addView(status); layout.addView(loginButton); setContentView(layout);
               }
-
               private void signIn() {
-                  loginButton.setEnabled(false);
-                  status.setText("Opening Google sign-in...");
-                  startActivityForResult(
-                      googleClient.getSignInIntent(), RC_SIGN_IN
-                  );
+                  loginButton.setEnabled(false); status.setText("Opening Google sign-in...");
+                  startActivityForResult(googleClient.getSignInIntent(), RC_SIGN_IN);
               }
-
-              @Override
-              protected void onActivityResult(
-                  int requestCode, int resultCode, Intent data
-              ) {
+              @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                   super.onActivityResult(requestCode, resultCode, data);
                   if (requestCode != RC_SIGN_IN) return;
-
                   try {
-                      GoogleSignInAccount account =
-                          GoogleSignIn.getSignedInAccountFromIntent(data)
-                              .getResult(ApiException.class);
-
-                      if (account == null || account.getIdToken() == null) {
-                          showError("Google ID token missing.");
-                          return;
-                      }
-
-                      auth.signInWithCredential(
-                          GoogleAuthProvider.getCredential(
-                              account.getIdToken(), null
-                          )
-                      ).addOnCompleteListener(this, task -> {
-                          if (task.isSuccessful()) {
-                              openChat();
-                          } else {
-                              showError("Firebase sign-in failed.");
-                          }
-                      });
-                  } catch (Exception e) {
-                      showError("Sign-in cancelled or failed. Try again.");
-                  }
+                      GoogleSignInAccount account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
+                      if (account == null || account.getIdToken() == null) { showError("Google ID token missing."); return; }
+                      auth.signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null))
+                          .addOnCompleteListener(this, task -> {
+                              if (task.isSuccessful()) openChat(); else showError("Firebase sign-in failed. Check Firebase settings.");
+                          });
+                  } catch (Exception e) { showError("Sign-in cancelled or failed. Try again."); }
               }
-
-              private void showError(String message) {
-                  status.setText(message);
-                  loginButton.setEnabled(true);
-              }
-
-              private void openChat() {
-                  startActivity(new Intent(this, ChatActivity.class));
-                  finish();
-              }
+              private void showError(String message) { status.setText(message); loginButton.setEnabled(true); }
+              private void openChat() { startActivity(new Intent(this, ChatActivity.class)); finish(); }
           }
           MAIN
 
@@ -317,7 +222,6 @@ jobs:
           import android.widget.ScrollView;
           import android.widget.TextView;
           import android.widget.Toast;
-
           import com.google.firebase.auth.FirebaseAuth;
           import com.google.firebase.auth.FirebaseUser;
           import com.google.firebase.firestore.DocumentSnapshot;
@@ -325,7 +229,6 @@ jobs:
           import com.google.firebase.firestore.FirebaseFirestore;
           import com.google.firebase.firestore.ListenerRegistration;
           import com.google.firebase.firestore.Query;
-
           import java.util.Arrays;
           import java.util.HashMap;
           import java.util.Map;
@@ -333,316 +236,139 @@ jobs:
           public class ChatActivity extends Activity {
               private FirebaseFirestore db;
               private FirebaseUser me;
-              private LinearLayout content;
-              private LinearLayout messages;
+              private LinearLayout content, messages;
               private EditText messageInput;
               private ScrollView messageScroll;
               private ListenerRegistration messageListener;
-              private String activeChatId;
-              private String activePeerName;
-              private String activePeerId;
+              private String activeChatId, activePeerName, activePeerId;
 
-              @Override
-              protected void onCreate(Bundle state) {
+              @Override protected void onCreate(Bundle state) {
                   super.onCreate(state);
-
-                  getWindow().setFlags(
-                      WindowManager.LayoutParams.FLAG_SECURE,
-                      WindowManager.LayoutParams.FLAG_SECURE
-                  );
+                  getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                   getWindow().setStatusBarColor(Color.rgb(7, 94, 84));
                   getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
-
                   me = FirebaseAuth.getInstance().getCurrentUser();
-                  if (me == null) {
-                      startActivity(new Intent(this, MainActivity.class));
-                      finish();
-                      return;
-                  }
-
-                  db = FirebaseFirestore.getInstance();
-                  showBaseScreen();
-                  registerProfile();
-                  showUsers();
+                  if (me == null) { startActivity(new Intent(this, MainActivity.class)); finish(); return; }
+                  db = FirebaseFirestore.getInstance(); showBaseScreen(); registerProfile(); showUsers();
               }
-
               private void showBaseScreen() {
-                  LinearLayout root = new LinearLayout(this);
-                  root.setOrientation(LinearLayout.VERTICAL);
+                  LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
                   root.setBackgroundColor(Color.rgb(245, 247, 248));
-
-                  LinearLayout header = new LinearLayout(this);
-                  header.setGravity(Gravity.CENTER_VERTICAL);
-                  header.setPadding(12, 6, 6, 6);
-                  header.setBackgroundColor(Color.rgb(7, 94, 84));
-
-                  TextView title = new TextView(this);
-                  title.setText("Momin Chat");
-                  title.setTextColor(Color.WHITE);
-                  title.setTextSize(22);
-
-                  Button signOut = new Button(this);
-                  signOut.setText("Sign out");
+                  LinearLayout header = new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
+                  header.setPadding(12, 6, 6, 6); header.setBackgroundColor(Color.rgb(7, 94, 84));
+                  TextView title = new TextView(this); title.setText("Momin Chat"); title.setTextColor(Color.WHITE); title.setTextSize(22);
+                  Button signOut = new Button(this); signOut.setText("Sign out");
                   signOut.setOnClickListener(v -> {
-                      stopMessageListener();
-                      FirebaseAuth.getInstance().signOut();
-                      GoogleSignInHelper.signOut(this, () -> {
-                          startActivity(new Intent(this, MainActivity.class));
-                          finish();
-                      });
+                      stopMessageListener(); FirebaseAuth.getInstance().signOut();
+                      com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this,
+                          new com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(
+                              com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN).build())
+                          .signOut().addOnCompleteListener(task -> {
+                              startActivity(new Intent(this, MainActivity.class)); finish();
+                          });
                   });
-
-                  header.addView(title, new LinearLayout.LayoutParams(
-                      0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
-                  ));
-                  header.addView(signOut);
-
-                  content = new LinearLayout(this);
-                  content.setOrientation(LinearLayout.VERTICAL);
-                  content.setPadding(12, 12, 12, 12);
-
-                  ScrollView scroll = new ScrollView(this);
-                  scroll.addView(content);
-
-                  root.addView(header);
-                  root.addView(scroll, new LinearLayout.LayoutParams(
-                      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1
-                  ));
-                  setContentView(root);
+                  header.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1)); header.addView(signOut);
+                  content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(12, 12, 12, 12);
+                  ScrollView scroll = new ScrollView(this); scroll.addView(content);
+                  root.addView(header); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1)); setContentView(root);
               }
-
               private void registerProfile() {
-                  String name = me.getDisplayName();
-                  if (name == null || name.trim().isEmpty()) {
-                      name = "Momin Chat user";
-                  }
-
-                  Map<String, Object> profile = new HashMap<>();
-                  profile.put("displayName", name);
-                  profile.put("uid", me.getUid());
-
-                  db.collection("users").document(me.getUid())
-                      .set(profile)
-                      .addOnFailureListener(e ->
-                          toast("Profile save failed. Check Firestore Rules."));
+                  String name = me.getDisplayName(); if (name == null || name.trim().isEmpty()) name = "Momin Chat user";
+                  Map<String, Object> profile = new HashMap<>(); profile.put("displayName", name); profile.put("uid", me.getUid());
+                  db.collection("users").document(me.getUid()).set(profile)
+                      .addOnFailureListener(e -> toast("Profile save failed. Check Firestore Rules."));
               }
-
               private void showUsers() {
-                  stopMessageListener();
-                  content.removeAllViews();
-
-                  TextView heading = new TextView(this);
-                  heading.setText("Users");
-                  heading.setTextSize(22);
-                  heading.setTextColor(Color.rgb(7, 94, 84));
-                  content.addView(heading);
-
-                  TextView info = new TextView(this);
-                  info.setText("Choose a user to open a private chat.");
-                  content.addView(info);
-
-                  db.collection("users").get()
-                      .addOnSuccessListener(snapshot -> {
-                          if (isFinishing()) return;
-                          boolean found = false;
-
-                          for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                              if (doc.getId().equals(me.getUid())) continue;
-
-                              String peerName = doc.getString("displayName");
-                              if (peerName == null || peerName.trim().isEmpty()) {
-                                  peerName = "Momin Chat user";
-                              }
-
-                              Button userButton = new Button(this);
-                              userButton.setText(peerName);
-                              String peerId = doc.getId();
-                              String finalName = peerName;
-                              userButton.setOnClickListener(v ->
-                                  openPrivateChat(peerId, finalName));
-                              content.addView(userButton);
-                              found = true;
-                          }
-
-                          if (!found) {
-                              TextView empty = new TextView(this);
-                              empty.setText(
-                                  "No other users yet. Ask another user to sign in."
-                              );
-                              empty.setPadding(0, 20, 0, 20);
-                              content.addView(empty);
-                          }
-                      })
-                      .addOnFailureListener(e ->
-                          toast("Could not load users. Check Firestore Rules."));
+                  stopMessageListener(); content.removeAllViews();
+                  TextView heading = new TextView(this); heading.setText("Users"); heading.setTextSize(22);
+                  heading.setTextColor(Color.rgb(7, 94, 84)); content.addView(heading);
+                  TextView info = new TextView(this); info.setText("Choose a user to open a private chat."); content.addView(info);
+                  db.collection("users").get().addOnSuccessListener(snapshot -> {
+                      if (isFinishing()) return; boolean found = false;
+                      for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                          if (doc.getId().equals(me.getUid())) continue;
+                          String peerName = doc.getString("displayName");
+                          if (peerName == null || peerName.trim().isEmpty()) peerName = "Momin Chat user";
+                          Button userButton = new Button(this); userButton.setText(peerName);
+                          String peerId = doc.getId(), finalName = peerName;
+                          userButton.setOnClickListener(v -> openPrivateChat(peerId, finalName)); content.addView(userButton); found = true;
+                      }
+                      if (!found) { TextView empty = new TextView(this); empty.setText("No other users yet. Ask another user to sign in.");
+                          empty.setPadding(0, 20, 0, 20); content.addView(empty); }
+                  }).addOnFailureListener(e -> toast("Could not load users. Check Firestore Rules."));
               }
-
               private String chatIdFor(String otherUid) {
-                  String a = me.getUid();
-                  String b = otherUid;
-                  if (a.compareTo(b) > 0) {
-                      String temp = a;
-                      a = b;
-                      b = temp;
-                  }
+                  String a = me.getUid(), b = otherUid;
+                  if (a.compareTo(b) > 0) { String temp = a; a = b; b = temp; }
                   return a + "_" + b;
               }
-
               private void openPrivateChat(String peerId, String peerName) {
-                  activePeerId = peerId;
-                  activePeerName = peerName;
-                  activeChatId = chatIdFor(peerId);
-
-                  Map<String, Object> chat = new HashMap<>();
-                  chat.put("participants", Arrays.asList(me.getUid(), peerId));
-
-                  db.collection("chats").document(activeChatId).get()
-                      .continueWithTask(task -> {
-                          if (!task.isSuccessful()) throw task.getException();
-                          if (!task.getResult().exists()) {
-                              return db.collection("chats")
-                                  .document(activeChatId).set(chat);
-                          }
-                          return com.google.android.gms.tasks.Tasks.forResult(null);
-                      })
-                      .addOnSuccessListener(v -> showPrivateChat())
-                      .addOnFailureListener(e ->
-                          toast("Could not open chat. Check Firestore Rules."));
+                  activePeerId = peerId; activePeerName = peerName; activeChatId = chatIdFor(peerId);
+                  Map<String, Object> chat = new HashMap<>(); chat.put("participants", Arrays.asList(me.getUid(), peerId));
+                  db.collection("chats").document(activeChatId).get().continueWithTask(task -> {
+                      if (!task.isSuccessful()) throw task.getException();
+                      if (!task.getResult().exists()) return db.collection("chats").document(activeChatId).set(chat);
+                      return com.google.android.gms.tasks.Tasks.forResult(null);
+                  }).addOnSuccessListener(v -> showPrivateChat())
+                    .addOnFailureListener(e -> toast("Could not open chat. Check Firestore Rules."));
               }
-
               private void showPrivateChat() {
-                  stopMessageListener();
-                  content.removeAllViews();
-
-                  Button back = new Button(this);
-                  back.setText("Back to users");
-                  back.setOnClickListener(v -> showUsers());
-                  content.addView(back);
-
-                  TextView title = new TextView(this);
-                  title.setText("Chat with " + activePeerName);
-                  title.setTextSize(20);
-                  title.setTextColor(Color.rgb(7, 94, 84));
-                  content.addView(title);
-
-                  messages = new Linear
-                  messages = new LinearLayout(this);
-                  messages.setOrientation(LinearLayout.VERTICAL);
-                  messages.setPadding(4, 8, 4, 8);
-
-                  messageScroll = new ScrollView(this);
-                  messageScroll.addView(messages);
-                  content.addView(messageScroll, new LinearLayout.LayoutParams(
-                      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1
-                  ));
-
-                  LinearLayout composer = new LinearLayout(this);
-                  composer.setGravity(Gravity.CENTER_VERTICAL);
-                  composer.setOrientation(LinearLayout.HORIZONTAL);
-
-                  messageInput = new EditText(this);
-                  messageInput.setSingleLine(false);
-                  messageInput.setHint("Write a message...");
-                  messageInput.setMaxLines(4);
-
-                  Button send = new Button(this);
-                  send.setText("Send");
-                  send.setOnClickListener(v -> sendMessage());
-
-                  composer.addView(messageInput, new LinearLayout.LayoutParams(
-                      0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
-                  ));
-                  composer.addView(send);
-                  content.addView(composer);
-
-                  listenForMessages();
+                  stopMessageListener(); content.removeAllViews();
+                  Button back = new Button(this); back.setText("Back to users"); back.setOnClickListener(v -> showUsers()); content.addView(back);
+                  TextView title = new TextView(this); title.setText("Chat with " + activePeerName); title.setTextSize(20);
+                  title.setTextColor(Color.rgb(7, 94, 84)); content.addView(title);
+                  messages = new LinearLayout(this); messages.setOrientation(LinearLayout.VERTICAL); messages.setPadding(4, 8, 4, 8);
+                  messageScroll = new ScrollView(this); messageScroll.addView(messages);
+                  content.addView(messageScroll, new LinearLayout.LayoutParams(-1, 0, 1));
+                  LinearLayout composer = new LinearLayout(this); composer.setGravity(Gravity.CENTER_VERTICAL);
+                  messageInput = new EditText(this); messageInput.setHint("Type a message"); messageInput.setMinHeight(48);
+                  composer.addView(messageInput, new LinearLayout.LayoutParams(0, -2, 1));
+                  Button send = new Button(this); send.setText("Send"); send.setOnClickListener(v -> sendMessage()); composer.addView(send);
+                  content.addView(composer); listenForMessages();
               }
-
               private void sendMessage() {
                   String text = messageInput.getText().toString().trim();
-                  if (text.isEmpty() || activeChatId == null) return;
-
-                  messageInput.setEnabled(false);
-
-                  Map<String, Object> message = new HashMap<>();
-                  message.put("senderId", me.getUid());
-                  message.put("text", text);
-                  message.put("timestamp", FieldValue.serverTimestamp());
-
-                  db.collection("chats").document(activeChatId)
-                      .collection("messages").add(message)
-                      .addOnSuccessListener(ref -> {
-                          messageInput.setText("");
-                          messageInput.setEnabled(true);
-                      })
-                      .addOnFailureListener(e -> {
-                          messageInput.setEnabled(true);
-                          toast("Message not sent. Check Firestore Rules.");
-                      });
+                  if (text.isEmpty()) { toast("Type a message first."); return; }
+                  if (activeChatId == null || activePeerId == null) { toast("Open a chat first."); return; }
+                  Map<String, Object> message = new HashMap<>(); message.put("senderId", me.getUid());
+                  message.put("text", text); message.put("timestamp", FieldValue.serverTimestamp());
+                  db.collection("chats").document(activeChatId).collection("messages").add(message)
+                      .addOnSuccessListener(ref -> { if (messageInput != null) messageInput.setText(""); })
+                      .addOnFailureListener(e -> toast("Message not sent. Check Firestore Rules."));
               }
-
               private void listenForMessages() {
-                  messageListener = db.collection("chats")
-                      .document(activeChatId)
-                      .collection("messages")
-                      .orderBy("timestamp", Query.Direction.ASCENDING)
-                      .limit(200)
-                      .addSnapshotListener((snapshot, error) -> {
-                          if (error != null) {
-                              toast("Could not load messages. Check Firestore Rules.");
-                              return;
-                          }
+                  messageListener = db.collection("chats").document(activeChatId).collection("messages")
+                      .orderBy("timestamp", Query.Direction.ASCENDING).addSnapshotListener((snapshot, error) -> {
+                          if (error != null) { toast("Could not load messages. Check Firestore Rules."); return; }
                           if (snapshot == null || messages == null) return;
-
                           messages.removeAllViews();
-
                           for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                              String body = doc.getString("text");
-                              String sender = doc.getString("senderId");
-                              if (body == null) continue;
-
-                              TextView bubble = new TextView(this);
-                              String prefix = me.getUid().equals(sender)
-                                  ? "You: " : activePeerName + ": ";
-                              bubble.setText(prefix + body);
-                              bubble.setTextSize(16);
-                              bubble.setTextColor(Color.DKGRAY);
-                              bubble.setPadding(12, 10, 12, 10);
-                              bubble.setBackgroundColor(
-                                  me.getUid().equals(sender)
-                                      ? Color.rgb(220, 248, 198)
-                                      : Color.WHITE
-                              );
-
-                              LinearLayout.LayoutParams params =
-                                  new LinearLayout.LayoutParams(
-                                      LinearLayout.LayoutParams.MATCH_PARENT,
-                                      LinearLayout.LayoutParams.WRAP_CONTENT
-                                  );
-                              params.setMargins(0, 4, 0, 4);
-                              messages.addView(bubble, params);
+                              String body = doc.getString("text"); if (body == null) body = "";
+                              boolean mine = me.getUid().equals(doc.getString("senderId"));
+                              TextView bubble = new TextView(this); bubble.setText((mine ? "You: " : activePeerName + ": ") + body);
+                              bubble.setTextSize(16); bubble.setTextColor(Color.BLACK); bubble.setPadding(12, 8, 12, 8);
+                              bubble.setBackgroundColor(mine ? Color.rgb(220, 248, 198) : Color.WHITE);
+                              LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+                              lp.setMargins(4, 4, 4, 4); lp.gravity = mine ? Gravity.END : Gravity.START;
+                              messages.addView(bubble, lp);
                           }
-
-                          messageScroll.post(() ->
-                              messageScroll.fullScroll(ScrollView.FOCUS_DOWN));
+                          messageScroll.post(() -> messageScroll.fullScroll(ScrollView.FOCUS_DOWN));
                       });
               }
-
-              private void stopMessageListener() {
-                  if (messageListener != null) {
-                      messageListener.remove();
-                      messageListener = null;
-                  }
-              }
-
-              private void toast(String message) {
-                  Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-              }
-
-              @Override
-              protected void onDestroy() {
-                  stopMessageListener();
-                  super.onDestroy();
-              }
+              private void stopMessageListener() { if (messageListener != null) { messageListener.remove(); messageListener = null; } }
+              private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
+              @Override protected void onDestroy() { stopMessageListener(); super.onDestroy(); }
           }
-          
+          CHAT
+
+      - name: Build debug APK
+        shell: bash
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Momin-Chat-debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
