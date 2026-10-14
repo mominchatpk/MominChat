@@ -1,350 +1,284 @@
-name: Build Momin Chat Android APK
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#075e54">
+  <title>Momin Chat</title>
 
-on:
-  workflow_dispatch:
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-jobs:
-  build:
-    name: Build Android APK
-    runs-on: ubuntu-latest
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      color: #202c33;
+    }
 
-    steps:
-      - name: Get source code
-        uses: actions/checkout@v4
+    header {
+      background: #075e54;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+    }
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+    header p {
+      margin: 0;
+      font-size: 14px;
+    }
 
-      - name: Accept Android SDK licenses
-        run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+    main {
+      max-width: 480px;
+      margin: 35px auto;
+      padding: 20px;
+    }
 
-      - name: Install Android SDK packages
-        run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+    .card {
+      background: white;
+      padding: 25px 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      text-align: center;
+    }
 
-      - name: Check Firebase configuration
-        shell: bash
-        run: |
-          if [ -f google-services.json ]; then
-            mkdir -p app
-            cp google-services.json app/google-services.json
-          elif [ ! -f app/google-services.json ]; then
-            echo "::error::google-services.json is missing"
-            exit 1
-          fi
+    .logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
 
-      - name: Create Android project
-        shell: bash
-        run: |
-          mkdir -p app/src/main/java/com/momin/chat
-          mkdir -p app/src/main/res/values
+    h2 {
+      font-size: 23px;
+      margin: 8px 0 12px;
+    }
 
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "MominChat"
-          include(":app")
-          EOF
+    .description {
+      color: #667781;
+      line-height: 1.6;
+      font-size: 15px;
+    }
 
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.7.3' apply false
-              id 'com.google.gms.google-services' version '4.4.2' apply false
-          }
-          EOF
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #075e54;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-          cat > gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          EOF
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
 
-          cat > app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-              id 'com.google.gms.google-services'
-          }
+    #signOutButton {
+      background: #667781;
+    }
 
-          android {
-              namespace 'com.momin.chat'
-              compileSdk 35
+    #status {
+      margin-top: 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
 
-              defaultConfig {
-                  applicationId 'com.momin.chat'
-                  minSdk 23
-                  targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
-              }
-          }
+    .about {
+      margin-top: 22px;
+      padding: 18px;
+      background: white;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 14px;
+      color: #667781;
+    }
 
-          dependencies {
-              implementation platform('com.google.firebase:firebase-bom:33.7.0')
-              implementation 'com.google.firebase:firebase-auth'
-              implementation 'androidx.credentials:credentials:1.5.0'
-              implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-              implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
-          }
-          EOF
+    .about h3 {
+      color: #202c33;
+      margin-top: 0;
+    }
 
-          cat > app/src/main/res/values/strings.xml <<'EOF'
-          <resources>
-              <string name="app_name">Momin Chat</string>
-          </resources>
-          EOF
+    footer {
+      text-align: center;
+      color: #667781;
+      font-size: 12px;
+      padding: 20px;
+    }
+  </style>
+</head>
 
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:label="@string/app_name"
-                  android:usesCleartextTraffic="false"
-                  android:allowBackup="false">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+<body>
+  <header>
+    <h1>Momin Chat</h1>
+    <p>Simple. Private. Connected.</p>
+  </header>
 
-          cat > app/src/main/java/com/momin/chat/MainActivity.java <<'EOF'
-          package com.momin.chat;
+  <main>
+    <section class="card">
+      <div class="logo">💬</div>
+      <h2>Welcome to Momin Chat</h2>
+      <p class="description">
+        Connect and chat with people you know.
+      </p>
 
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.os.CancellationSignal;
-          import android.graphics.Color;
-          import android.view.Gravity;
-          import android.view.WindowManager;
-          import android.widget.Button;
-          import android.widget.LinearLayout;
-          import android.widget.TextView;
+      <button id="googleButton">
+        Continue with Google
+      </button>
 
-          import androidx.credentials.Credential;
-          import androidx.credentials.CredentialManager;
-          import androidx.credentials.CredentialManagerCallback;
-          import androidx.credentials.CustomCredential;
-          import androidx.credentials.GetCredentialRequest;
-          import androidx.credentials.GetCredentialResponse;
-          import androidx.credentials.exceptions.GetCredentialException;
+      <button id="signOutButton" hidden>
+        Sign Out
+      </button>
 
-          import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
-          import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
-          import com.google.firebase.auth.AuthCredential;
-          import com.google.firebase.auth.FirebaseAuth;
-          import com.google.firebase.auth.FirebaseUser;
-          import com.google.firebase.auth.GoogleAuthProvider;
+      <div id="status" role="status" aria-live="polite">
+        Please sign in with your Google account.
+      </div>
+    </section>
 
-          public class MainActivity extends Activity {
-              private FirebaseAuth auth;
-              private CredentialManager credentialManager;
-              private TextView status;
-              private Button loginButton;
-              private Button logoutButton;
+    <section class="about">
+      <h3>About Momin Chat</h3>
+      <p>
+        Momin Chat is an early preview of a private
+        communication app.
+      </p>
+      <p>
+        Text messaging, photo and video sharing, voice
+        messages, voice calls, and end-to-end encryption
+        are not available yet. These features require
+        further development and testing.
+      </p>
+    </section>
+  </main>
 
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
+  <footer>
+    Momin Chat &copy; 2026
+  </footer>
 
-                  getWindow().setFlags(
-                      WindowManager.LayoutParams.FLAG_SECURE,
-                      WindowManager.LayoutParams.FLAG_SECURE
-                  );
-                  getWindow().setStatusBarColor(Color.rgb(7, 94, 84));
-                  getWindow().setNavigationBarColor(Color.rgb(7, 94, 84));
+  <script type="module">
+    import {
+      initializeApp
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 
-                  auth = FirebaseAuth.getInstance();
-                  credentialManager = CredentialManager.create(this);
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged,
+      signOut,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
-                  LinearLayout layout = new LinearLayout(this);
-                  layout.setOrientation(LinearLayout.VERTICAL);
-                  layout.setGravity(Gravity.CENTER);
-                  layout.setPadding(32, 32, 32, 32);
-                  layout.setBackgroundColor(Color.rgb(245, 247, 248));
+    const firebaseConfig = {
+      apiKey: "AIzaSyBcuoE8sLRWgSXdlPEBrRUz1YDYSvjKBLE",
+      authDomain: "mominchat-1e171.firebaseapp.com",
+      projectId: "mominchat-1e171",
+      storageBucket: "mominchat-1e171.firebasestorage.app",
+      messagingSenderId: "970724069428",
+      appId: "1:970724069428:web:f3dcde970e9a4ed28e3a61"
+    };
 
-                  TextView title = new TextView(this);
-                  title.setText("Momin Chat");
-                  title.setTextSize(30);
-                  title.setTextColor(Color.rgb(7, 94, 84));
-                  title.setGravity(Gravity.CENTER);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-                  status = new TextView(this);
-                  status.setTextSize(16);
-                  status.setTextColor(Color.DKGRAY);
-                  status.setGravity(Gravity.CENTER);
-                  status.setPadding(0, 24, 0, 24);
+    provider.setCustomParameters({
+      prompt: "select_account"
+    });
 
-                  loginButton = new Button(this);
-                  loginButton.setText("Continue with Google");
-                  loginButton.setOnClickListener(v -> signInWithGoogle());
+    const googleButton = document.getElementById("googleButton");
+    const signOutButton = document.getElementById("signOutButton");
+    const statusBox = document.getElementById("status");
 
-                  logoutButton = new Button(this);
-                  logoutButton.setText("Sign out");
-                  logoutButton.setOnClickListener(v -> {
-                      auth.signOut();
-                      updateSignedInState();
-                  });
+    function showStatus(message) {
+      statusBox.textContent = message;
+    }
 
-                  TextView privacy = new TextView(this);
-                  privacy.setText(
-                      "Sign in securely with your Google account.\n" +
-                      "Screenshots and screen recording are restricted " +
-                      "where Android supports this protection."
-                  );
-                  privacy.setTextSize(13);
-                  privacy.setTextColor(Color.DKGRAY);
-                  privacy.setGravity(Gravity.CENTER);
-                  privacy.setPadding(0, 24, 0, 0);
+    function showError(error) {
+      console.error("Momin Chat sign-in error:", error);
 
-                  layout.addView(title);
-                  layout.addView(status);
-                  layout.addView(loginButton);
-                  layout.addView(logoutButton);
-                  layout.addView(privacy);
-                  setContentView(layout);
+      const messages = {
+        "auth/popup-closed-by-user":
+          "The sign-in window was closed. Please try again.",
+        "auth/popup-blocked":
+          "The browser blocked the sign-in window. Allow pop-ups and try again.",
+        "auth/unauthorized-domain":
+          "This website domain is not authorized in Firebase Authentication.",
+        "auth/operation-not-allowed":
+          "Google sign-in is not enabled in Firebase.",
+        "auth/network-request-failed":
+          "Network error. Check your internet connection and try again.",
+        "auth/too-many-requests":
+          "Too many attempts. Please wait and try again."
+      };
 
-                  updateSignedInState();
-              }
+      showStatus(
+        messages[error.code] ||
+        "Sign-in failed: " + (error.code || error.message || "Unknown error")
+      );
+    }
 
-              private void updateSignedInState() {
-                  FirebaseUser user = auth.getCurrentUser();
+    googleButton.addEventListener("click", async () => {
+      googleButton.disabled = true;
+      showStatus("Connecting to Google. Please wait...");
 
-                  if (user != null) {
-                      String name = user.getDisplayName();
-                      if (name == null || name.trim().isEmpty()) {
-                          name = "Momin Chat user";
-                      }
-                      status.setText("Signed in successfully\nWelcome, " + name);
-                      loginButton.setVisibility(android.view.View.GONE);
-                      logoutButton.setVisibility(android.view.View.VISIBLE);
-                  } else {
-                      status.setText("Sign in to get started");
-                      loginButton.setVisibility(android.view.View.VISIBLE);
-                      logoutButton.setVisibility(android.view.View.GONE);
-                  }
-              }
+      try {
+        await setPersistence(auth, browserLocalPersistence);
 
-              private void signInWithGoogle() {
-                  status.setText("Opening Google sign-in...");
-                  loginButton.setEnabled(false);
+        const result = await signInWithPopup(auth, provider);
 
-                  try {
-                      GetGoogleIdOption googleIdOption =
-                          new GetGoogleIdOption.Builder()
-                              .setFilterByAuthorizedAccounts(false)
-                              .setServerClientId(
-                                  getString(R.string.default_web_client_id)
-                              )
-                              .setAutoSelectEnabled(false)
-                              .build();
+        showStatus(
+          "Google sign-in successful. Welcome, " +
+          (result.user.displayName || result.user.email || "user") +
+          "!"
+        );
+      } catch (error) {
+        showError(error);
+      } finally {
+        googleButton.disabled = false;
+      }
+    });
 
-                      GetCredentialRequest request =
-                          new GetCredentialRequest.Builder()
-                              .addCredentialOption(googleIdOption)
-                              .build();
+    signOutButton.addEventListener("click", async () => {
+      signOutButton.disabled = true;
+      showStatus("Signing out...");
 
-                      credentialManager.getCredentialAsync(
-                          this,
-                          request,
-                          new CancellationSignal(),
-                          getMainExecutor(),
-                          new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
-                              @Override
-                              public void onResult(GetCredentialResponse result) {
-                                  handleCredential(result.getCredential());
-                              }
+      try {
+        await signOut(auth);
+        showStatus("You have signed out.");
+      } catch (error) {
+        showError(error);
+      } finally {
+        signOutButton.disabled = false;
+      }
+    });
 
-                              @Override
-                              public void onError(GetCredentialException e) {
-                                  loginButton.setEnabled(true);
-                                  status.setText(
-                                      "Google sign-in failed. Please try again."
-                                  );
-                              }
-                          }
-                      );
-                  } catch (Exception e) {
-                      loginButton.setEnabled(true);
-                      status.setText("Unable to start Google sign-in. Please try again.");
-                  }
-              }
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        googleButton.hidden = true;
+        signOutButton.hidden = false;
 
-              private void handleCredential(Credential credential) {
-                  if (!(credential instanceof CustomCredential)
-                      || !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                          .equals(credential.getType())) {
-                      loginButton.setEnabled(true);
-                      status.setText("Please choose a Google account and try again.");
-                      return;
-                  }
-
-                  try {
-                      GoogleIdTokenCredential googleCredential =
-                          GoogleIdTokenCredential.createFrom(
-                              ((CustomCredential) credential).getData()
-                          );
-
-                      AuthCredential firebaseCredential =
-                          GoogleAuthProvider.getCredential(
-                              googleCredential.getIdToken(),
-                              null
-                          );
-
-                      auth.signInWithCredential(firebaseCredential)
-                          .addOnCompleteListener(this, task -> {
-                              loginButton.setEnabled(true);
-                              if (task.isSuccessful()) {
-                                  updateSignedInState();
-                              } else {
-                                  status.setText(
-                                      "Firebase sign-in failed. Check Firebase settings."
-                                  );
-                              }
-                          });
-                  } catch (Exception e) {
-                      loginButton.setEnabled(true);
-                      status.setText("Google account verification failed. Please try again.");
-                  }
-              }
-          }
-          EOF
-
-      - name: Build debug APK
-        run: gradle assembleDebug
-
-      - name: Show APK signing certificate SHA-1
-        run: |
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Save APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Momin-Chat-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-                            
+        showStatus(
+          "Signed in as " +
+          (user.displayName || user.email || "Google user") +
+          "."
+        );
+      } else {
+        googleButton.hidden = false;
+        signOutButton.hidden = true;
+        showStatus("Please sign in with your Google account.");
+      }
+    });
+  </script>
+</body>
+</html>
