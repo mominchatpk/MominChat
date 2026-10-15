@@ -376,14 +376,14 @@ jobs:
         -alias "$ANDROID_KEY_ALIAS" |
         grep -E 'SHA1:|Alias name:'
 
-      - name: Build debug APK
-        shell: bash
-        run: gradle --no-daemon :app:assembleDebug
+  - name: Build debug APK
+    shell: bash
+    run: gradle --no-daemon :app:assembleDebug
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Momin-Chat-debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: Momin-Chat-debug-APK
+      path: app/build/outputs/apk/debug/app-debug.apk
+      if-no-files-found: error
+      retention-days: 14
