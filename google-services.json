@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "970724069428-5crj1m7okmftdup025ogejgqig9oe1b2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "7587311b1fbcbb695c7e1984590208083b12ee82"
+          }
+        },
+        {
           "client_id": "970724069428-5usv4up3tii6asjrueopbh61qea36jgt.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
