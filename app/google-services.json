@@ -1,0 +1,71 @@
+{
+  "project_info": {
+    "project_number": "970724069428",
+    "project_id": "mominchat-1e171",
+    "storage_bucket": "mominchat-1e171.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:970724069428:android:295e160d91ccabca8e3a61",
+        "android_client_info": {
+          "package_name": "com.momin.chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "970724069428-5crj1m7okmftdup025ogejgqig9oe1b2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "7587311b1fbcbb695c7e1984590208083b12ee82"
+          }
+        },
+        {
+          "client_id": "970724069428-5usv4up3tii6asjrueopbh61qea36jgt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "571dbd4b3452431e5eab03b1315da8a7b12afdca"
+          }
+        },
+        {
+          "client_id": "970724069428-i12anksg6elds7g7nhc8d6u4qju6epsi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "9d8cd7447ba89c948ec351c852f706db2eb44f00"
+          }
+        },
+        {
+          "client_id": "970724069428-si8boedgf2gpvtqckbqcno5jbii0i8uo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.momin.chat",
+            "certificate_hash": "b8fc80048fa9d9bdd3aabb4a746c2ec2409a4a3b"
+          }
+        },
+        {
+          "client_id": "970724069428-5ob2quqes8on87rtrr7vrdfsjdrddhj8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu1zz8_LoVo8IdXIprxFW12uYItw7xqik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "970724069428-5ob2quqes8on87rtrr7vrdfsjdrddhj8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
